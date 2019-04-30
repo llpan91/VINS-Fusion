@@ -75,8 +75,7 @@ void GlobalSFM::triangulateTwoFrames(int frame0, Eigen::Matrix<double, 3, 4> &Po
   for (int j = 0; j < feature_num; j++) {
     if (sfm_f[j].state == true) continue;
     bool has_0 = false, has_1 = false;
-    Vector2d point0;
-    Vector2d point1;
+    Vector2d point0, point1;
     for (int k = 0; k < (int)sfm_f[j].observation.size(); k++) {
       if (sfm_f[j].observation[k].first == frame0) {
         point0 = sfm_f[j].observation[k].second;
@@ -87,6 +86,7 @@ void GlobalSFM::triangulateTwoFrames(int frame0, Eigen::Matrix<double, 3, 4> &Po
         has_1 = true;
       }
     }
+    // a landmark are observed at frame0 and frame1 both.
     if (has_0 && has_1) {
       Vector3d point_3d;
       triangulatePoint(Pose0, Pose1, point0, point1, point_3d);
@@ -99,11 +99,27 @@ void GlobalSFM::triangulateTwoFrames(int frame0, Eigen::Matrix<double, 3, 4> &Po
   }
 }
 
-// 	 q w_R_cam t w_R_cam
+//  q w_R_cam t w_R_cam
 //  c_rotation cam_R_w
 //  c_translation cam_R_w
 // relative_q[i][j]  j_q_i
 // relative_t[i][j]  j_t_ji  (j < i)
+
+/* pipline of construct
+ * given l and frame_num relative pose, a sets of feature observations,
+ * step1: 1) set l-frame as reference frame, triangulate l and last frame, 
+ * 	  2) Iteratively:
+ * 		solverPnp with l+1, l+2, ..., frame_num-1, with frame_num frame
+ *		triangulate points between l+1,l+2,...,frame_num - 1 with frame_num frame
+ * 	  3) triangulate l frame with l+1, l+2, ..., frame_num - 1
+ * 	  4) Iteratively:
+		triangulate all remind features using 0, ..., l-1, with l-frame
+		solvePnp  between 0, ..., l-1, with l-frame
+ * 	  5) Traversing all remind features which observations > 2, using first and last observed frames
+ * step2: Local Bundle Adjustment, ceres 
+ * step3: re-write all optimized pose and 3d-point into q,T and sfm_tracked_points
+ * 
+ */
 bool GlobalSFM::construct(int frame_num, Quaterniond *q, Vector3d *T, int l, const Matrix3d relative_R,
                           const Vector3d relative_T, vector<SFMFeature> &sfm_f,
                           map<int, Vector3d> &sfm_tracked_points) {
@@ -195,21 +211,15 @@ bool GlobalSFM::construct(int frame_num, Quaterniond *q, Vector3d *T, int l, con
       // point_3d.transpose() << endl;
     }
   }
-
   /*
-          for (int i = 0; i < frame_num; i++)
-          {
-                  q[i] = c_Rotation[i].transpose();
-                  cout << "solvePnP  q" << " i " << i <<"  " <<q[i].w() << "  " << q[i].vec().transpose() <<
-     endl;
-          }
-          for (int i = 0; i < frame_num; i++)
-          {
-                  Vector3d t_tmp;
-                  t_tmp = -1 * (q[i] * c_Translation[i]);
-                  cout << "solvePnP  t" << " i " << i <<"  " << t_tmp.x() <<"  "<< t_tmp.y() <<"  "<<
-     t_tmp.z() << endl;
-          }
+  for (int i = 0; i < frame_num; i++) {
+    q[i] = c_Rotation[i].transpose();
+    cout << "solvePnP  q" << " i " << i <<"  " <<q[i].w() << "  " << q[i].vec().transpose() << endl;
+  }for (int i = 0; i < frame_num; i++){
+    Vector3d t_tmp;
+    t_tmp = -1 * (q[i] * c_Translation[i]);
+    cout << "solvePnP  t" << " i " << i <<"  " << t_tmp.x() <<"  "<< t_tmp.y() <<"  "<< t_tmp.z() << endl;
+  }
   */
   // full BA
   ceres::Problem problem;
@@ -229,6 +239,7 @@ bool GlobalSFM::construct(int frame_num, Quaterniond *q, Vector3d *T, int l, con
     if (i == l) {
       problem.SetParameterBlockConstant(c_rotation[i]);
     }
+    // fixed the first and last frame pose
     if (i == l || i == frame_num - 1) {
       problem.SetParameterBlockConstant(c_translation[i]);
     }

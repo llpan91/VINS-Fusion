@@ -218,3 +218,4 @@ bool MotionEstimator::solveRelativeRT(const vector<pair<Vector3d, Vector3d>> &co
   }
   return false;
 }
+ 

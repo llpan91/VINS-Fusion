@@ -47,12 +47,10 @@ struct ReprojectionError3D {
     residuals[1] = yp - T(observed_v);
     return true;
   }
-
   static ceres::CostFunction *Create(const double observed_x, const double observed_y) {
     return (new ceres::AutoDiffCostFunction<ReprojectionError3D, 2, 4, 3, 3>(
         new ReprojectionError3D(observed_x, observed_y)));
   }
-
   double observed_u;
   double observed_v;
 };
@@ -60,6 +58,17 @@ struct ReprojectionError3D {
 class GlobalSFM {
  public:
   GlobalSFM();
+  
+  /*\brief 外部调用接口,主要处理函数. 输入第l帧和最后一帧的相对R,t, 根据特征点的观测估计所有帧的位姿和特征点的3D坐标
+    \param[in] frame_num: pose的个数, elements in q,T
+    \param[out] q: SFM结果,每帧在l帧参考系下的quaternion
+    \param[out] T: SFM结果,每帧在l帧参考系下的position
+    \param[in] l: 以第l帧为参考系,即l帧的pose为坐标原点
+    \param[in] relative_R: 第l帧到最后一帧的相对旋转
+    \param[in] relative_T: 第l帧到最后一帧的相对平移
+    \param[in] sfm_f: feature list,每个SFMFeature中包含多个观测
+    \param[out] sfm_tracked_point: 优化后的3D特征点在l帧参考系的position
+   */
   bool construct(int frame_num, Quaterniond *q, Vector3d *T, int l, const Matrix3d relative_R,
                  const Vector3d relative_T, vector<SFMFeature> &sfm_f,
                  map<int, Vector3d> &sfm_tracked_points);
