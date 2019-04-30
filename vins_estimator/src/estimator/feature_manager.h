@@ -39,6 +39,7 @@ class FeaturePerFrame {
     cur_td = td;
     is_stereo = false;
   }
+  
   void rightObservation(const Eigen::Matrix<double, 7, 1> &_point) {
     pointRight.x() = _point(0);
     pointRight.y() = _point(1);
@@ -60,7 +61,7 @@ class FeaturePerId {
  public:
   const int feature_id;
   int start_frame;
-  vector<FeaturePerFrame> feature_per_frame;
+  std::vector<FeaturePerFrame> feature_per_frame;
   int used_num;
   double estimated_depth;
   int solve_flag;  // 0 haven't solve yet; 1 solve succ; 2 solve fail;

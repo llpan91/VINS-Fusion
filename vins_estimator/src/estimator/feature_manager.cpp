@@ -35,8 +35,9 @@ int FeatureManager::getFeatureCount() {
   return cnt;
 }
 
-bool FeatureManager::addFeatureCheckParallax(
-    int frame_count, const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> &image, double td) {
+bool FeatureManager::addFeatureCheckParallax(int frame_count,
+     const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> &image, double td) {
+  
   ROS_DEBUG("input feature: %d", (int)image.size());
   ROS_DEBUG("num of feature: %d", getFeatureCount());
   double parallax_sum = 0;
@@ -68,9 +69,6 @@ bool FeatureManager::addFeatureCheckParallax(
     }
   }
 
-  // if (frame_count < 2 || last_track_num < 20)
-  // if (frame_count < 2 || last_track_num < 20 || new_feature_num > 0.5 *
-  // last_track_num)
   if (frame_count < 2 || last_track_num < 20 || long_track_num < 40 || new_feature_num > 0.5 * last_track_num)
     return true;
 
@@ -101,9 +99,7 @@ vector<pair<Vector3d, Vector3d>> FeatureManager::getCorresponding(int frame_coun
       int idx_r = frame_count_r - it.start_frame;
 
       a = it.feature_per_frame[idx_l].point;
-
       b = it.feature_per_frame[idx_r].point;
-
       corres.push_back(make_pair(a, b));
     }
   }
@@ -117,9 +113,6 @@ void FeatureManager::setDepth(const VectorXd &x) {
     if (it_per_id.used_num < 4) continue;
 
     it_per_id.estimated_depth = 1.0 / x(++feature_index);
-    // ROS_INFO("feature id %d , start_frame %d, depth %f ",
-    // it_per_id->feature_id, it_per_id-> start_frame,
-    // it_per_id->estimated_depth);
     if (it_per_id.estimated_depth < 0) {
       it_per_id.solve_flag = 2;
     } else
@@ -189,24 +182,19 @@ bool FeatureManager::solvePoseByPnP(Eigen::Matrix3d &R, Eigen::Vector3d &P, vect
   cv::Mat K = (cv::Mat_<double>(3, 3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);
   bool pnp_succ;
   pnp_succ = cv::solvePnP(pts3D, pts2D, K, D, rvec, t, 1);
-  // pnp_succ = solvePnPRansac(pts3D, pts2D, K, D, rvec, t, true, 100, 8.0 /
-  // focalLength, 0.99, inliers);
 
   if (!pnp_succ) {
     printf("pnp failed ! \n");
     return false;
   }
   cv::Rodrigues(rvec, r);
-  // cout << "r " << endl << r << endl;
   Eigen::MatrixXd R_pnp;
   cv::cv2eigen(r, R_pnp);
   Eigen::MatrixXd T_pnp;
   cv::cv2eigen(t, T_pnp);
-
   // cam_T_w ---> w_T_cam
   R = R_pnp.transpose();
   P = R * (-T_pnp);
-
   return true;
 }
 
@@ -459,26 +447,12 @@ double FeatureManager::compensatedParallax2(const FeaturePerId &it_per_id, int f
 
   double ans = 0;
   Vector3d p_j = frame_j.point;
-
-  double u_j = p_j(0);
-  double v_j = p_j(1);
-
+  double u_j = p_j(0), v_j = p_j(1);
   Vector3d p_i = frame_i.point;
-  Vector3d p_i_comp;
-
-  // int r_i = frame_count - 2;
-  // int r_j = frame_count - 1;
-  // p_i_comp = ric[camera_id_j].transpose() * Rs[r_j].transpose() * Rs[r_i] *
-  // ric[camera_id_i] * p_i;
-  p_i_comp = p_i;
-  double dep_i = p_i(2);
-  double u_i = p_i(0) / dep_i;
-  double v_i = p_i(1) / dep_i;
+  Vector3d p_i_comp = p_i;
+  double dep_i = p_i(2), u_i = p_i(0) / dep_i, v_i = p_i(1) / dep_i;
   double du = u_i - u_j, dv = v_i - v_j;
-
-  double dep_i_comp = p_i_comp(2);
-  double u_i_comp = p_i_comp(0) / dep_i_comp;
-  double v_i_comp = p_i_comp(1) / dep_i_comp;
+  double dep_i_comp = p_i_comp(2), u_i_comp = p_i_comp(0) / dep_i_comp, v_i_comp = p_i_comp(1) / dep_i_comp;
   double du_comp = u_i_comp - u_j, dv_comp = v_i_comp - v_j;
 
   ans = max(ans, sqrt(min(du * du + dv * dv, du_comp * du_comp + dv_comp * dv_comp)));
