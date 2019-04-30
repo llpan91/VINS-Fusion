@@ -41,20 +41,19 @@ class BriefExtractor {
 
 class KeyFrame {
  public:
-  KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3d &_vio_R_w_i,
-           cv::Mat &_image, vector<cv::Point3f> &_point_3d, vector<cv::Point2f> &_point_2d_uv,
+  KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3d &_vio_R_w_i, cv::Mat &_image,
+           vector<cv::Point3f> &_point_3d, vector<cv::Point2f> &_point_2d_uv,
            vector<cv::Point2f> &_point_2d_normal, vector<double> &_point_id, int _sequence);
-  KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3d &_vio_R_w_i,
-           Vector3d &_T_w_i, Matrix3d &_R_w_i, cv::Mat &_image, int _loop_index,
-           Eigen::Matrix<double, 8, 1> &_loop_info, vector<cv::KeyPoint> &_keypoints,
-           vector<cv::KeyPoint> &_keypoints_norm, vector<BRIEF::bitset> &_brief_descriptors);
+  KeyFrame(double _time_stamp, int _index, Vector3d &_vio_T_w_i, Matrix3d &_vio_R_w_i, Vector3d &_T_w_i,
+           Matrix3d &_R_w_i, cv::Mat &_image, int _loop_index, Eigen::Matrix<double, 8, 1> &_loop_info,
+           vector<cv::KeyPoint> &_keypoints, vector<cv::KeyPoint> &_keypoints_norm,
+           vector<BRIEF::bitset> &_brief_descriptors);
   bool findConnection(KeyFrame *old_kf);
   void computeWindowBRIEFPoint();
   void computeBRIEFPoint();
   // void extractBrief();
   int HammingDis(const BRIEF::bitset &a, const BRIEF::bitset &b);
-  bool searchInAera(const BRIEF::bitset window_descriptor,
-                    const std::vector<BRIEF::bitset> &descriptors_old,
+  bool searchInAera(const BRIEF::bitset window_descriptor, const std::vector<BRIEF::bitset> &descriptors_old,
                     const std::vector<cv::KeyPoint> &keypoints_old,
                     const std::vector<cv::KeyPoint> &keypoints_old_norm, cv::Point2f &best_match,
                     cv::Point2f &best_match_norm);
@@ -64,11 +63,9 @@ class KeyFrame {
                         const std::vector<cv::KeyPoint> &keypoints_old,
                         const std::vector<cv::KeyPoint> &keypoints_old_norm);
   void FundmantalMatrixRANSAC(const std::vector<cv::Point2f> &matched_2d_cur_norm,
-                              const std::vector<cv::Point2f> &matched_2d_old_norm,
-                              vector<uchar> &status);
-  void PnPRANSAC(const vector<cv::Point2f> &matched_2d_old_norm,
-                 const std::vector<cv::Point3f> &matched_3d, std::vector<uchar> &status,
-                 Eigen::Vector3d &PnP_T_old, Eigen::Matrix3d &PnP_R_old);
+                              const std::vector<cv::Point2f> &matched_2d_old_norm, vector<uchar> &status);
+  void PnPRANSAC(const vector<cv::Point2f> &matched_2d_old_norm, const std::vector<cv::Point3f> &matched_3d,
+                 std::vector<uchar> &status, Eigen::Vector3d &PnP_T_old, Eigen::Matrix3d &PnP_R_old);
   void getVioPose(Eigen::Vector3d &_T_w_i, Eigen::Matrix3d &_R_w_i);
   void getPose(Eigen::Vector3d &_T_w_i, Eigen::Matrix3d &_R_w_i);
   void updatePose(const Eigen::Vector3d &_T_w_i, const Eigen::Matrix3d &_R_w_i);

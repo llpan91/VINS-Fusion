@@ -133,8 +133,7 @@ void point_callback(const sensor_msgs::PointCloudConstPtr &point_msg) {
     p_3d.x = point_msg->points[i].x;
     p_3d.y = point_msg->points[i].y;
     p_3d.z = point_msg->points[i].z;
-    Eigen::Vector3d tmp =
-        posegraph.r_drift * Eigen::Vector3d(p_3d.x, p_3d.y, p_3d.z) + posegraph.t_drift;
+    Eigen::Vector3d tmp = posegraph.r_drift * Eigen::Vector3d(p_3d.x, p_3d.y, p_3d.z) + posegraph.t_drift;
     geometry_msgs::Point32 p;
     p.x = tmp(0);
     p.y = tmp(1);
@@ -153,8 +152,7 @@ void margin_point_callback(const sensor_msgs::PointCloudConstPtr &point_msg) {
     p_3d.x = point_msg->points[i].x;
     p_3d.y = point_msg->points[i].y;
     p_3d.z = point_msg->points[i].z;
-    Eigen::Vector3d tmp =
-        posegraph.r_drift * Eigen::Vector3d(p_3d.x, p_3d.y, p_3d.z) + posegraph.t_drift;
+    Eigen::Vector3d tmp = posegraph.r_drift * Eigen::Vector3d(p_3d.x, p_3d.y, p_3d.z) + posegraph.t_drift;
     geometry_msgs::Point32 p;
     p.x = tmp(0);
     p.y = tmp(1);
@@ -240,8 +238,7 @@ void process() {
       if (image_buf.front()->header.stamp.toSec() > pose_buf.front()->header.stamp.toSec()) {
         pose_buf.pop();
         printf("throw pose at beginning\n");
-      } else if (image_buf.front()->header.stamp.toSec() >
-                 point_buf.front()->header.stamp.toSec()) {
+      } else if (image_buf.front()->header.stamp.toSec() > point_buf.front()->header.stamp.toSec()) {
         point_buf.pop();
         printf("throw point at beginning\n");
       } else if (image_buf.back()->header.stamp.toSec() >= pose_buf.front()->header.stamp.toSec() &&
@@ -249,13 +246,11 @@ void process() {
         pose_msg = pose_buf.front();
         pose_buf.pop();
         while (!pose_buf.empty()) pose_buf.pop();
-        while (image_buf.front()->header.stamp.toSec() < pose_msg->header.stamp.toSec())
-          image_buf.pop();
+        while (image_buf.front()->header.stamp.toSec() < pose_msg->header.stamp.toSec()) image_buf.pop();
         image_msg = image_buf.front();
         image_buf.pop();
 
-        while (point_buf.front()->header.stamp.toSec() < pose_msg->header.stamp.toSec())
-          point_buf.pop();
+        while (point_buf.front()->header.stamp.toSec() < pose_msg->header.stamp.toSec()) point_buf.pop();
         point_msg = point_buf.front();
         point_buf.pop();
       }
@@ -327,9 +322,8 @@ void process() {
           // printf("u %f, v %f \n", p_2d_uv.x, p_2d_uv.y);
         }
 
-        KeyFrame *keyframe =
-            new KeyFrame(pose_msg->header.stamp.toSec(), frame_index, T, R, image, point_3d,
-                         point_2d_uv, point_2d_normal, point_id, sequence);
+        KeyFrame *keyframe = new KeyFrame(pose_msg->header.stamp.toSec(), frame_index, T, R, image, point_3d,
+                                          point_2d_uv, point_2d_normal, point_id, sequence);
         m_process.lock();
         start_flag = 1;
         posegraph.addKeyFrame(keyframe, 1);
@@ -441,11 +435,9 @@ int main(int argc, char **argv) {
   ros::Subscriber sub_vio = n.subscribe("/vins_estimator/odometry", 2000, vio_callback);
   ros::Subscriber sub_image = n.subscribe(IMAGE_TOPIC, 2000, image_callback);
   ros::Subscriber sub_pose = n.subscribe("/vins_estimator/keyframe_pose", 2000, pose_callback);
-  ros::Subscriber sub_extrinsic =
-      n.subscribe("/vins_estimator/extrinsic", 2000, extrinsic_callback);
+  ros::Subscriber sub_extrinsic = n.subscribe("/vins_estimator/extrinsic", 2000, extrinsic_callback);
   ros::Subscriber sub_point = n.subscribe("/vins_estimator/keyframe_point", 2000, point_callback);
-  ros::Subscriber sub_margin_point =
-      n.subscribe("/vins_estimator/margin_cloud", 2000, margin_point_callback);
+  ros::Subscriber sub_margin_point = n.subscribe("/vins_estimator/margin_cloud", 2000, margin_point_callback);
 
   pub_match_img = n.advertise<sensor_msgs::Image>("match_image", 1000);
   pub_camera_pose_visual = n.advertise<visualization_msgs::MarkerArray>("camera_pose_visual", 1000);
