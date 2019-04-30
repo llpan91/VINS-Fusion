@@ -19,7 +19,7 @@ InitialEXRotation::InitialEXRotation() {
   ric = Matrix3d::Identity();
 }
 
-bool InitialEXRotation::CalibrationExRotation(vector<pair<Vector3d, Vector3d>> corres,
+bool InitialEXRotation::CalibrationExRotation(vector<pair<Vector3d, Vector3d> > corres,
                                               Quaterniond delta_q_imu, Matrix3d &calib_ric_result) {
   frame_count++;
   Rc.push_back(solveRelativeR(corres));
@@ -73,7 +73,7 @@ bool InitialEXRotation::CalibrationExRotation(vector<pair<Vector3d, Vector3d>> c
     return false;
 }
 
-Matrix3d InitialEXRotation::solveRelativeR(const vector<pair<Vector3d, Vector3d>> &corres) {
+Matrix3d InitialEXRotation::solveRelativeR(const vector<pair<Vector3d, Vector3d> > &corres) {
   if (corres.size() >= 9) {
     vector<cv::Point2f> ll, rr;
     for (int i = 0; i < int(corres.size()); i++) {
