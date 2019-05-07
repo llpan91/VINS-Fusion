@@ -19,12 +19,12 @@ bool FeatureTracker::inBorder(const cv::Point2f &pt) {
          img_y < row - BORDER_SIZE;
 }
 
-double distance(cv::Point2f pt1, cv::Point2f pt2) {
-  // printf("pt1: %f %f pt2: %f %f\n", pt1.x, pt1.y, pt2.x, pt2.y);
-  double dx = pt1.x - pt2.x;
-  double dy = pt1.y - pt2.y;
-  return sqrt(dx * dx + dy * dy);
-}
+// double distance(cv::Point2f pt1, cv::Point2f pt2) {
+//   // printf("pt1: %f %f pt2: %f %f\n", pt1.x, pt1.y, pt2.x, pt2.y);
+//   double dx = pt1.x - pt2.x;
+//   double dy = pt1.y - pt2.y;
+//   return sqrt(dx * dx + dy * dy);
+// }
 
 void reduceVector(vector<cv::Point2f> &v, vector<uchar> status) {
   int j = 0;
@@ -98,7 +98,7 @@ double FeatureTracker::distance(cv::Point2f &pt1, cv::Point2f &pt2) {
 }
 
 /// \para[out] featureFrame
-map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::
+map<int, vector<pair<int, Eigen::Matrix<double, 7, 1> > > > FeatureTracker::
 trackImage( double _cur_time, const cv::Mat &_img, const cv::Mat &_img1) {
   TicToc t_r;
   cur_time = _cur_time;
@@ -122,11 +122,9 @@ trackImage( double _cur_time, const cv::Mat &_img, const cv::Mat &_img1) {
     vector<float> err;
     if (hasPrediction) {
       cur_pts = predict_pts;
-      cv::calcOpticalFlowPyrLK(
-          prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21), 1,
-          cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
+      cv::calcOpticalFlowPyrLK( prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21),
+	  1, cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 30, 0.01),
           cv::OPTFLOW_USE_INITIAL_FLOW);
-
       int succ_num = 0;
       for (size_t i = 0; i < status.size(); i++) {
         if (status[i]) {
@@ -135,13 +133,11 @@ trackImage( double _cur_time, const cv::Mat &_img, const cv::Mat &_img1) {
       }
       if (succ_num < 10){
 	// add pyramid level number
-        cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err,
-                                 cv::Size(21, 21), 3);
+        cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21), 3);
       }
     } 
     else{
-      cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21),
-                               3);
+      cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21), 3);
     }
     // reverse check, perform forward and backward optical flow to improve tracking accuracy
     if (FLOW_BACK) {
@@ -262,9 +258,10 @@ trackImage( double _cur_time, const cv::Mat &_img, const cv::Mat &_img1) {
     prevLeftPtsMap[ids[i]] = cur_pts[i];
   }
 
+  // TODO create a FeatureFrame
   /// \para first int -> pt_id
   /// \para vector-> { camera_id, xyz_uv_velocity( 7 dimensions)} 
-  map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame;
+  map<int, vector<pair<int, Eigen::Matrix<double, 7, 1> > > > featureFrame;
   for (size_t i = 0; i < ids.size(); i++) {
     int feature_id = ids[i];
     double x, y, z;
@@ -411,8 +408,7 @@ vector<cv::Point2f> FeatureTracker::ptsVelocity(vector<int> &ids, vector<cv::Poi
     double dt = cur_time - prev_time;
 
     for (unsigned int i = 0; i < pts.size(); i++) {
-      std::map<int, cv::Point2f>::iterator it;
-      it = prev_id_pts.find(ids[i]);
+      std::map<int, cv::Point2f>::iterator it = prev_id_pts.find(ids[i]);
       if (it != prev_id_pts.end()) {
         double v_x = (pts[i].x - it->second.x) / dt;
         double v_y = (pts[i].y - it->second.y) / dt;
@@ -434,10 +430,8 @@ void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight,
                                map<int, cv::Point2f> &prevLeftPtsMap) {
   // int rows = imLeft.rows;
   int cols = imLeft.cols;
-  if (!imRight.empty() && stereo_cam)
-    cv::hconcat(imLeft, imRight, imTrack);
-  else
-    imTrack = imLeft.clone();
+  if (!imRight.empty() && stereo_cam) cv::hconcat(imLeft, imRight, imTrack);
+  else imTrack = imLeft.clone();
   cv::cvtColor(imTrack, imTrack, CV_GRAY2RGB);
 
   for (size_t j = 0; j < curLeftPts.size(); j++) {
@@ -463,14 +457,12 @@ void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight,
     }
   }
 
-  // draw prediction
-  /*
+  /*	// draw prediction
   for(size_t i = 0; i < predict_pts_debug.size(); i++)
   {
       cv::circle(imTrack, predict_pts_debug[i], 2, cv::Scalar(0, 170, 255), 2);
   }
   */
-  // printf("predict pts size %d \n", (int)predict_pts_debug.size());
 
   // cv::Mat imCur2Compress;
   // cv::resize(imCur2, imCur2Compress, cv::Size(cols, rows / 2));
@@ -484,8 +476,6 @@ void FeatureTracker::setPrediction(map<int, Eigen::Vector3d> &predictPts) {
   predict_pts_debug.clear();
   map<int, Eigen::Vector3d>::iterator itPredict;
   for (size_t i = 0; i < ids.size(); i++) {
-    // printf("prevLeftId size %d prevLeftPts size %d\n",(int)prevLeftIds.size(),
-    // (int)prevLeftPts.size());
     int id = ids[i];
     itPredict = predictPts.find(id);
     if (itPredict != predictPts.end()) {

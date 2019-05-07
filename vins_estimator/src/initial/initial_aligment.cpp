@@ -17,11 +17,10 @@ void solveGyroscopeBias(map<double, ImageFrame> &all_image_frame, Vector3d *Bgs)
   Vector3d delta_bg;
   A.setZero();
   b.setZero();
-  map<double, ImageFrame>::iterator frame_i;
-  map<double, ImageFrame>::iterator frame_j;
+  map<double, ImageFrame>::iterator frame_i, frame_j;
   for (frame_i = all_image_frame.begin(); next(frame_i) != all_image_frame.end(); frame_i++) {
     frame_j = next(frame_i);
-    MatrixXd tmp_A(3, 3);
+    MatrixXd tmp_A(3, 3);	// jacbian about gyro_bias
     tmp_A.setZero();
     VectorXd tmp_b(3);
     tmp_b.setZero();
@@ -35,7 +34,6 @@ void solveGyroscopeBias(map<double, ImageFrame> &all_image_frame, Vector3d *Bgs)
   ROS_WARN_STREAM("gyroscope bias initial calibration " << delta_bg.transpose());
 
   for (int i = 0; i <= WINDOW_SIZE; i++) Bgs[i] += delta_bg;
-
   for (frame_i = all_image_frame.begin(); next(frame_i) != all_image_frame.end(); frame_i++) {
     frame_j = next(frame_i);
     frame_j->second.pre_integration->repropagate(Vector3d::Zero(), Bgs[0]);
@@ -67,8 +65,7 @@ void RefineGravity(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vector
   VectorXd b{n_state};
   b.setZero();
 
-  map<double, ImageFrame>::iterator frame_i;
-  map<double, ImageFrame>::iterator frame_j;
+  map<double, ImageFrame>::iterator frame_i, frame_j;
   for (int k = 0; k < 4; k++) {
     MatrixXd lxly(3, 2);
     lxly = TangentBasis(g0);
@@ -133,8 +130,7 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
   VectorXd b{n_state};
   b.setZero();
 
-  map<double, ImageFrame>::iterator frame_i;
-  map<double, ImageFrame>::iterator frame_j;
+  map<double, ImageFrame>::iterator frame_i, frame_j;
   int i = 0;
   for (frame_i = all_image_frame.begin(); next(frame_i) != all_image_frame.end(); frame_i++, i++) {
     frame_j = next(frame_i);
@@ -143,19 +139,19 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
     tmp_A.setZero();
     VectorXd tmp_b(6);
     tmp_b.setZero();
-
     double dt = frame_j->second.pre_integration->sum_dt;
 
+    // Hx = z => (H.t() * H) x = H.t()*z; r_A = (H.t() * H), r_b = H.t()*z;
     tmp_A.block<3, 3>(0, 0) = -dt * Matrix3d::Identity();
     tmp_A.block<3, 3>(0, 6) = frame_i->second.R.transpose() * dt * dt / 2 * Matrix3d::Identity();
     tmp_A.block<3, 1>(0, 9) = frame_i->second.R.transpose() * (frame_j->second.T - frame_i->second.T) / 100.0;
-    tmp_b.block<3, 1>(0, 0) = frame_j->second.pre_integration->delta_p +
-                              frame_i->second.R.transpose() * frame_j->second.R * TIC[0] - TIC[0];
-    // cout << "delta_p   " << frame_j->second.pre_integration->delta_p.transpose() << endl;
     tmp_A.block<3, 3>(3, 0) = -Matrix3d::Identity();
     tmp_A.block<3, 3>(3, 3) = frame_i->second.R.transpose() * frame_j->second.R;
     tmp_A.block<3, 3>(3, 6) = frame_i->second.R.transpose() * dt * Matrix3d::Identity();
+    
+    tmp_b.block<3, 1>(0, 0) = frame_j->second.pre_integration->delta_p + frame_i->second.R.transpose() * frame_j->second.R * TIC[0] - TIC[0];
     tmp_b.block<3, 1>(3, 0) = frame_j->second.pre_integration->delta_v;
+    // cout << "delta_p   " << frame_j->second.pre_integration->delta_p.transpose() << endl;
     // cout << "delta_v   " << frame_j->second.pre_integration->delta_v.transpose() << endl;
 
     Matrix<double, 6, 6> cov_inv = Matrix<double, 6, 6>::Zero();
@@ -163,17 +159,18 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
     // MatrixXd cov_inv = cov.inverse();
     cov_inv.setIdentity();
 
-    MatrixXd r_A = tmp_A.transpose() * cov_inv * tmp_A;
-    VectorXd r_b = tmp_A.transpose() * cov_inv * tmp_b;
+    MatrixXd r_A = tmp_A.transpose() * cov_inv * tmp_A;	// size 10 * 10
+    VectorXd r_b = tmp_A.transpose() * cov_inv * tmp_b;	// size 10 * 1
 
     A.block<6, 6>(i * 3, i * 3) += r_A.topLeftCorner<6, 6>();
-    b.segment<6>(i * 3) += r_b.head<6>();
-
+    A.block<6, 4>(i * 3, n_state - 4) += r_A.topRightCorner<6, 4>();
     A.bottomRightCorner<4, 4>() += r_A.bottomRightCorner<4, 4>();
+    A.block<4, 6>(n_state - 4, i * 3) += r_A.bottomLeftCorner<4, 6>();
+    // std::cout << "A = " << std::endl << A << std::endl;
+    
+    b.segment<6>(i * 3) += r_b.head<6>();
     b.tail<4>() += r_b.tail<4>();
 
-    A.block<6, 4>(i * 3, n_state - 4) += r_A.topRightCorner<6, 4>();
-    A.block<4, 6>(n_state - 4, i * 3) += r_A.bottomLeftCorner<4, 6>();
   }
   A = A * 1000.0;
   b = b * 1000.0;
@@ -198,7 +195,6 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
 
 bool VisualIMUAlignment(map<double, ImageFrame> &all_image_frame, Vector3d *Bgs, Vector3d &g, VectorXd &x) {
   solveGyroscopeBias(all_image_frame, Bgs);
-
   if (LinearAlignment(all_image_frame, g, x))
     return true;
   else

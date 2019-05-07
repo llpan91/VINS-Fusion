@@ -245,6 +245,7 @@ bool GlobalSFM::construct(int frame_num, Quaterniond *q, Vector3d *T, int l, con
     }
   }
 
+  // TODO
   for (int i = 0; i < feature_num; i++) {
     if (sfm_f[i].state != true) continue;
     for (int j = 0; j < int(sfm_f[i].observation.size()); j++) {

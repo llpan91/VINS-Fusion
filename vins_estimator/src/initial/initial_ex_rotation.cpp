@@ -39,7 +39,7 @@ bool InitialEXRotation::CalibrationExRotation(vector<pair<Vector3d, Vector3d> > 
     double huber = angular_distance > 5.0 ? 5.0 / angular_distance : 1.0;
     ++sum_ok;
     Matrix4d L, R;
-
+    
     double w = Quaterniond(Rc[i]).w();
     Vector3d q = Quaterniond(Rc[i]).vec();
     L.block<3, 3>(0, 0) = w * Matrix3d::Identity() + Utility::skewSymmetric(q);
