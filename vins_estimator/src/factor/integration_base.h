@@ -20,13 +20,14 @@ class IntegrationBase {
  public:
   IntegrationBase() = delete;
   IntegrationBase(const Eigen::Vector3d &_acc_0, const Eigen::Vector3d &_gyr_0,
-                  const Eigen::Vector3d &_linearized_ba, const Eigen::Vector3d &_linearized_bg)
+		  const Eigen::Vector3d &_linearized_ba, const Eigen::Vector3d &_linearized_bg)
       : acc_0{_acc_0},
         gyr_0{_gyr_0},
         linearized_acc{_acc_0},
         linearized_gyr{_gyr_0},
         linearized_ba{_linearized_ba},
         linearized_bg{_linearized_bg},
+	// TODO dimension = 15 => delta_p, delta_v, delta_q, delta_bias_a, delta_bias_w
         jacobian{Eigen::Matrix<double, 15, 15>::Identity()},
         covariance{Eigen::Matrix<double, 15, 15>::Zero()},
         sum_dt{0.0},
@@ -150,8 +151,7 @@ class IntegrationBase {
                         linearized_bg, result_delta_p, result_delta_q, result_delta_v, result_linearized_ba,
                         result_linearized_bg, 1);
 
-    // checkJacobian(_dt, acc_0, gyr_0, acc_1, gyr_1, delta_p, delta_q, delta_v,
-    //                    linearized_ba, linearized_bg);
+    // checkJacobian(_dt, acc_0, gyr_0, acc_1, gyr_1, delta_p, delta_q, delta_v, linearized_ba, linearized_bg);
     delta_p = result_delta_p;
     delta_q = result_delta_q;
     delta_v = result_delta_v;
@@ -172,9 +172,7 @@ class IntegrationBase {
 
     Eigen::Matrix3d dp_dba = jacobian.block<3, 3>(O_P, O_BA);
     Eigen::Matrix3d dp_dbg = jacobian.block<3, 3>(O_P, O_BG);
-
     Eigen::Matrix3d dq_dbg = jacobian.block<3, 3>(O_R, O_BG);
-
     Eigen::Matrix3d dv_dba = jacobian.block<3, 3>(O_V, O_BA);
     Eigen::Matrix3d dv_dbg = jacobian.block<3, 3>(O_V, O_BG);
 

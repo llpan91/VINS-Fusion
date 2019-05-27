@@ -82,7 +82,6 @@ void readParameters(std::string config_file) {
   FLOW_BACK = fsSettings["flow_back"];
 
   MULTIPLE_THREAD = fsSettings["multiple_thread"];
-
   USE_IMU = fsSettings["imu"];
   printf("USE_IMU: %d\n", USE_IMU);
   if (USE_IMU) {
@@ -137,7 +136,6 @@ void readParameters(std::string config_file) {
 
   int pn = config_file.find_last_of('/');
   std::string configPath = config_file.substr(0, pn);
-
   std::string cam0Calib;
   fsSettings["cam0_calib"] >> cam0Calib;
   std::string cam0Path = configPath + "/" + cam0Calib;
