@@ -75,20 +75,15 @@ class InitialPoseFactor : public ceres::SizedCostFunction<6, 7> {
     for (int k = 0; k < 6; k++) {
       Eigen::Vector3d P(parameters[0][0], parameters[0][1], parameters[0][2]);
       Eigen::Quaterniond Q(parameters[0][6], parameters[0][3], parameters[0][4], parameters[0][5]);
-
       int a = k / 3, b = k % 3;
       Eigen::Vector3d delta = Eigen::Vector3d(b == 0, b == 1, b == 2) * eps;
 
-      if (a == 0)
-        P += delta;
-      else if (a == 1)
-        Q = Q * Utility::deltaQ(delta);
-
+      if (a == 0) {P += delta;}
+      else if (a == 1){ Q = Q * Utility::deltaQ(delta);}
       Eigen::Matrix<double, 6, 1> tmp_residual;
       tmp_residual.block<3, 1>(0, 0) = P - init_P;
       tmp_residual.block<3, 1>(3, 0) = 2 * (init_Q.inverse() * Q).vec();
       tmp_residual = sqrt_info * tmp_residual;
-
       num_jacobian.col(k) = (tmp_residual - residual) / eps;
     }
     std::cout << num_jacobian << std::endl;
