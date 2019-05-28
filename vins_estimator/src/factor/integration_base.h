@@ -63,7 +63,9 @@ class IntegrationBase {
     linearized_bg = _linearized_bg;
     jacobian.setIdentity();
     covariance.setZero();
-    for (int i = 0; i < static_cast<int>(dt_buf.size()); i++) propagate(dt_buf[i], acc_buf[i], gyr_buf[i]);
+    for (int i = 0; i < static_cast<int>(dt_buf.size()); i++) {
+      propagate(dt_buf[i], acc_buf[i], gyr_buf[i]);
+    }
   }
 
   void midPointIntegration(double _dt, const Eigen::Vector3d &_acc_0, const Eigen::Vector3d &_gyr_0,
@@ -87,7 +89,7 @@ class IntegrationBase {
 
     if (update_jacobian) {
       Vector3d w_x = 0.5 * (_gyr_0 + _gyr_1) - linearized_bg;
-      Vector3d a_0_x = _acc_0 - linearized_ba;
+      Vector3d a_0_x = _acc_0 - linearized_ba;       
       Vector3d a_1_x = _acc_1 - linearized_ba;
       Matrix3d R_w_x, R_a_0_x, R_a_1_x;
 
@@ -141,6 +143,7 @@ class IntegrationBase {
     dt = _dt;
     acc_1 = _acc_1;
     gyr_1 = _gyr_1;
+    // state variables
     Vector3d result_delta_p;
     Quaterniond result_delta_q;
     Vector3d result_delta_v;
@@ -163,6 +166,11 @@ class IntegrationBase {
     gyr_0 = gyr_1;
   }
 
+  /**
+  * [evaluate 计算IMU测量模型的残差]
+  * @param Pi，Qi，Vi，Bai，Bgi  [前一次预积分结果]
+  * @param Pj，Qj，Vj，Baj，Bgj  [后一次预积分结果]
+  */
   Eigen::Matrix<double, 15, 1> evaluate(const Eigen::Vector3d &Pi, const Eigen::Quaterniond &Qi,
                                         const Eigen::Vector3d &Vi, const Eigen::Vector3d &Bai,
                                         const Eigen::Vector3d &Bgi, const Eigen::Vector3d &Pj,
@@ -170,19 +178,22 @@ class IntegrationBase {
                                         const Eigen::Vector3d &Baj, const Eigen::Vector3d &Bgj) {
     Eigen::Matrix<double, 15, 1> residuals;
 
-    Eigen::Matrix3d dp_dba = jacobian.block<3, 3>(O_P, O_BA);
-    Eigen::Matrix3d dp_dbg = jacobian.block<3, 3>(O_P, O_BG);
-    Eigen::Matrix3d dq_dbg = jacobian.block<3, 3>(O_R, O_BG);
-    Eigen::Matrix3d dv_dba = jacobian.block<3, 3>(O_V, O_BA);
-    Eigen::Matrix3d dv_dbg = jacobian.block<3, 3>(O_V, O_BG);
+    Eigen::Matrix3d dp_dba = jacobian.block<3, 3>(O_P, O_BA); // (0, 9)
+    Eigen::Matrix3d dp_dbg = jacobian.block<3, 3>(O_P, O_BG); // (0,12)
+    Eigen::Matrix3d dq_dbg = jacobian.block<3, 3>(O_R, O_BG); // (3,12)
+    Eigen::Matrix3d dv_dba = jacobian.block<3, 3>(O_V, O_BA); // (6, 9)
+    Eigen::Matrix3d dv_dbg = jacobian.block<3, 3>(O_V, O_BG); // (6,12)
 
     Eigen::Vector3d dba = Bai - linearized_ba;
     Eigen::Vector3d dbg = Bgi - linearized_bg;
 
+    // IMU预积分的结果,消除掉acc bias和gyro bias的影响, 对应IMU model中的\hat{\alpha},\hat{\beta},\hat{\gamma}
     Eigen::Quaterniond corrected_delta_q = delta_q * Utility::deltaQ(dq_dbg * dbg);
     Eigen::Vector3d corrected_delta_v = delta_v + dv_dba * dba + dv_dbg * dbg;
     Eigen::Vector3d corrected_delta_p = delta_p + dp_dba * dba + dp_dbg * dbg;
 
+    // IMU项residual计算,输入参数是状态的估计值, 上面correct_delta_*是预积分值, 二者求'diff'得到residual
+    // ref to formula(13) of paper vins-mono
     residuals.block<3, 1>(O_P, 0) =
         Qi.inverse() * (0.5 * G * sum_dt * sum_dt + Pj - Pi - Vi * sum_dt) - corrected_delta_p;
     residuals.block<3, 1>(O_R, 0) = 2 * (corrected_delta_q.inverse() * (Qi.inverse() * Qj)).vec();
