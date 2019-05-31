@@ -19,12 +19,12 @@ InitialEXRotation::InitialEXRotation() {
   ric = Matrix3d::Identity();
 }
 
-bool InitialEXRotation::CalibrationExRotation(vector<pair<Vector3d, Vector3d> > corres,
+bool InitialEXRotation::CalibrationExRotation(const std::vector<pair<Vector3d, Vector3d> > corres,
                                               Quaterniond delta_q_imu, Matrix3d &calib_ric_result) {
   frame_count++;
-  Rc.push_back(solveRelativeR(corres));
-  Rimu.push_back(delta_q_imu.toRotationMatrix());
-  Rc_g.push_back(ric.inverse() * delta_q_imu * ric);
+  Rc.push_back(solveRelativeR(corres));			
+  Rimu.push_back(delta_q_imu.toRotationMatrix());	
+  Rc_g.push_back(ric.inverse() * delta_q_imu * ric);	
 
   Eigen::MatrixXd A(frame_count * 4, 4);
   A.setZero();
@@ -54,7 +54,10 @@ bool InitialEXRotation::CalibrationExRotation(vector<pair<Vector3d, Vector3d> > 
     R.block<3, 1>(0, 3) = q;
     R.block<1, 3>(3, 0) = -q.transpose();
     R(3, 3) = w;
-
+    
+    // Q = (Q1 - Q2) = ([q_bk_bk+1]L - [q_ck_ck+1]R)
+    // Q*q_b_c = 0; huber is weight
+    
     A.block<4, 4>((i - 1) * 4, 0) = huber * (L - R);
   }
 
@@ -75,7 +78,7 @@ bool InitialEXRotation::CalibrationExRotation(vector<pair<Vector3d, Vector3d> > 
 
 Matrix3d InitialEXRotation::solveRelativeR(const vector<pair<Vector3d, Vector3d> > &corres) {
   if (corres.size() >= 9) {
-    vector<cv::Point2f> ll, rr;
+    std::vector<cv::Point2f> ll, rr;
     for (int i = 0; i < int(corres.size()); i++) {
       ll.push_back(cv::Point2f(corres[i].first(0), corres[i].first(1)));
       rr.push_back(cv::Point2f(corres[i].second(0), corres[i].second(1)));
@@ -83,7 +86,6 @@ Matrix3d InitialEXRotation::solveRelativeR(const vector<pair<Vector3d, Vector3d>
     cv::Mat E = cv::findFundamentalMat(ll, rr);
     cv::Mat_<double> R1, R2, t1, t2;
     decomposeE(E, R1, R2, t1, t2);
-
     if (determinant(R1) + 1.0 < 1e-09) {
       E = -E;
       decomposeE(E, R1, R2, t1, t2);
@@ -93,8 +95,11 @@ Matrix3d InitialEXRotation::solveRelativeR(const vector<pair<Vector3d, Vector3d>
     cv::Mat_<double> ans_R_cv = ratio1 > ratio2 ? R1 : R2;
 
     Matrix3d ans_R_eigen;
-    for (int i = 0; i < 3; i++)
-      for (int j = 0; j < 3; j++) ans_R_eigen(j, i) = ans_R_cv(i, j);
+    for (int i = 0; i < 3; i++){
+      for (int j = 0; j < 3; j++){
+	ans_R_eigen(j, i) = ans_R_cv(i, j);
+      }
+    }
     return ans_R_eigen;
   }
   return Matrix3d::Identity();
@@ -110,10 +115,11 @@ double InitialEXRotation::testTriangulation(const vector<cv::Point2f> &l, const 
   int front_count = 0;
   for (int i = 0; i < pointcloud.cols; i++) {
     double normal_factor = pointcloud.col(i).at<float>(3);
-
     cv::Mat_<double> p_3d_l = cv::Mat(P) * (pointcloud.col(i) / normal_factor);
     cv::Mat_<double> p_3d_r = cv::Mat(P1) * (pointcloud.col(i) / normal_factor);
-    if (p_3d_l(2) > 0 && p_3d_r(2) > 0) front_count++;
+    if (p_3d_l(2) > 0 && p_3d_r(2) > 0) {
+      front_count++;
+    }
   }
   ROS_DEBUG("MotionEstimator: %f", 1.0 * front_count / pointcloud.cols);
   return 1.0 * front_count / pointcloud.cols;

@@ -40,6 +40,7 @@ void solveGyroscopeBias(map<double, ImageFrame> &all_image_frame, Vector3d *Bgs)
   }
 }
 
+// b => [3 * 2]  w = [2 * 1]
 MatrixXd TangentBasis(Vector3d &g0) {
   Vector3d b, c;
   Vector3d a = g0.normalized();
@@ -50,6 +51,8 @@ MatrixXd TangentBasis(Vector3d &g0) {
   MatrixXd bc(3, 2);
   bc.block<3, 1>(0, 0) = b;
   bc.block<3, 1>(0, 1) = c;
+  // debug 
+  std::cout << "bc = " << std::endl << bc << std::endl;
   return bc;
 }
 
@@ -82,8 +85,7 @@ void RefineGravity(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vector
 
       tmp_A.block<3, 3>(0, 0) = -dt * Matrix3d::Identity();
       tmp_A.block<3, 2>(0, 6) = frame_i->second.R.transpose() * dt * dt / 2 * Matrix3d::Identity() * lxly;
-      tmp_A.block<3, 1>(0, 8) =
-          frame_i->second.R.transpose() * (frame_j->second.T - frame_i->second.T) / 100.0;
+      tmp_A.block<3, 1>(0, 8) = frame_i->second.R.transpose() * (frame_j->second.T - frame_i->second.T) / 100.0;
       tmp_b.block<3, 1>(0, 0) = frame_j->second.pre_integration->delta_p +
                                 frame_i->second.R.transpose() * frame_j->second.R * TIC[0] - TIC[0] -
                                 frame_i->second.R.transpose() * dt * dt / 2 * g0;
@@ -121,6 +123,7 @@ void RefineGravity(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vector
   g = g0;
 }
 
+/// \brief x = [v_bo_bo, v_b1_b1, ..., v_bn_bn, scale]
 bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, VectorXd &x) {
   int all_frame_count = all_image_frame.size();
   int n_state = all_frame_count * 3 + 3 + 1;
@@ -135,6 +138,8 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
   for (frame_i = all_image_frame.begin(); next(frame_i) != all_image_frame.end(); frame_i++, i++) {
     frame_j = next(frame_i);
 
+    // H.top(3) include 3 * [3 * 3] + [3 * 1] = 10 dimensions
+    // correspond to coefficients of state variable [v_bk_bk, v_bk+1_bk+1, g_c0, s]
     MatrixXd tmp_A(6, 10);
     tmp_A.setZero();
     VectorXd tmp_b(6);
@@ -144,6 +149,7 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
     // Hx = z => (H.t() * H) x = H.t()*z; r_A = (H.t() * H), r_b = H.t()*z;
     tmp_A.block<3, 3>(0, 0) = -dt * Matrix3d::Identity();
     tmp_A.block<3, 3>(0, 6) = frame_i->second.R.transpose() * dt * dt / 2 * Matrix3d::Identity();
+    // TODO why / 100.0 ??
     tmp_A.block<3, 1>(0, 9) = frame_i->second.R.transpose() * (frame_j->second.T - frame_i->second.T) / 100.0;
     tmp_A.block<3, 3>(3, 0) = -Matrix3d::Identity();
     tmp_A.block<3, 3>(3, 3) = frame_i->second.R.transpose() * frame_j->second.R;
@@ -162,6 +168,7 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
     MatrixXd r_A = tmp_A.transpose() * cov_inv * tmp_A;	// size 10 * 10
     VectorXd r_b = tmp_A.transpose() * cov_inv * tmp_b;	// size 10 * 1
 
+    // TODO  construct a huge Matrix solution
     A.block<6, 6>(i * 3, i * 3) += r_A.topLeftCorner<6, 6>();
     A.block<6, 4>(i * 3, n_state - 4) += r_A.topRightCorner<6, 4>();
     A.bottomRightCorner<4, 4>() += r_A.bottomRightCorner<4, 4>();
@@ -170,8 +177,8 @@ bool LinearAlignment(map<double, ImageFrame> &all_image_frame, Vector3d &g, Vect
     
     b.segment<6>(i * 3) += r_b.head<6>();
     b.tail<4>() += r_b.tail<4>();
-
   }
+  
   A = A * 1000.0;
   b = b * 1000.0;
   x = A.ldlt().solve(b);

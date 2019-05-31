@@ -74,29 +74,24 @@ bool ProjectionFactor::Evaluate(double const *const *parameters, double *residua
         -x1 * x3 / pow(norm, 3), -x2 * x3 / pow(norm, 3), 1.0 / norm - x3 * x3 / pow(norm, 3);
     reduce = tangent_base * norm_jaco;
 #else
-    reduce << 1. / dep_j, 0, -pts_camera_j(0) / (dep_j * dep_j), 0, 1. / dep_j,
-        -pts_camera_j(1) / (dep_j * dep_j);
+    reduce << 1. / dep_j, 0, -pts_camera_j(0) / (dep_j * dep_j), 0, 1. / dep_j, -pts_camera_j(1) / (dep_j * dep_j);
 #endif
     reduce = sqrt_info * reduce;
 
     if (jacobians[0]) {
       Eigen::Map<Eigen::Matrix<double, 2, 7, Eigen::RowMajor>> jacobian_pose_i(jacobians[0]);
-
       Eigen::Matrix<double, 3, 6> jaco_i;
       jaco_i.leftCols<3>() = ric.transpose() * Rj.transpose();
       jaco_i.rightCols<3>() = ric.transpose() * Rj.transpose() * Ri * -Utility::skewSymmetric(pts_imu_i);
-
       jacobian_pose_i.leftCols<6>() = reduce * jaco_i;
       jacobian_pose_i.rightCols<1>().setZero();
     }
 
     if (jacobians[1]) {
       Eigen::Map<Eigen::Matrix<double, 2, 7, Eigen::RowMajor>> jacobian_pose_j(jacobians[1]);
-
       Eigen::Matrix<double, 3, 6> jaco_j;
       jaco_j.leftCols<3>() = ric.transpose() * -Rj.transpose();
       jaco_j.rightCols<3>() = ric.transpose() * Utility::skewSymmetric(pts_imu_j);
-
       jacobian_pose_j.leftCols<6>() = reduce * jaco_j;
       jacobian_pose_j.rightCols<1>().setZero();
     }
@@ -105,8 +100,7 @@ bool ProjectionFactor::Evaluate(double const *const *parameters, double *residua
       Eigen::Matrix<double, 3, 6> jaco_ex;
       jaco_ex.leftCols<3>() = ric.transpose() * (Rj.transpose() * Ri - Eigen::Matrix3d::Identity());
       Eigen::Matrix3d tmp_r = ric.transpose() * Rj.transpose() * Ri * ric;
-      jaco_ex.rightCols<3>() =
-          -tmp_r * Utility::skewSymmetric(pts_camera_i) + Utility::skewSymmetric(tmp_r * pts_camera_i) +
+      jaco_ex.rightCols<3>() = -tmp_r * Utility::skewSymmetric(pts_camera_i) + Utility::skewSymmetric(tmp_r * pts_camera_i) +
           Utility::skewSymmetric(ric.transpose() * (Rj.transpose() * (Ri * tic + Pi - Pj) - tic));
       jacobian_ex_pose.leftCols<6>() = reduce * jaco_ex;
       jacobian_ex_pose.rightCols<1>().setZero();
@@ -114,8 +108,7 @@ bool ProjectionFactor::Evaluate(double const *const *parameters, double *residua
     if (jacobians[3]) {
       Eigen::Map<Eigen::Vector2d> jacobian_feature(jacobians[3]);
 #if 1
-      jacobian_feature =
-          reduce * ric.transpose() * Rj.transpose() * Ri * ric * pts_i * -1.0 / (inv_dep_i * inv_dep_i);
+      jacobian_feature = reduce * ric.transpose() * Rj.transpose() * Ri * ric * pts_i * -1.0 / (inv_dep_i * inv_dep_i);
 #else
       jacobian_feature = reduce * ric.transpose() * Rj.transpose() * Ri * ric * pts_i;
 #endif

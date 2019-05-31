@@ -188,7 +188,7 @@ int recoverPose(InputArray E, InputArray _points1, InputArray _points2, OutputAr
 }
 
 bool MotionEstimator::solveRelativeRT(const vector<pair<Vector3d, Vector3d>> &corres, Matrix3d &Rotation,
-                                      Vector3d &Translation) {
+				      Vector3d &Translation) {
   if (corres.size() >= 15) {
     vector<cv::Point2f> ll, rr;
     for (int i = 0; i < int(corres.size()); i++) {
@@ -206,9 +206,10 @@ bool MotionEstimator::solveRelativeRT(const vector<pair<Vector3d, Vector3d>> &co
     Eigen::Vector3d T;
     for (int i = 0; i < 3; i++) {
       T(i) = trans.at<double>(i, 0);
-      for (int j = 0; j < 3; j++) R(i, j) = rot.at<double>(i, j);
+      for (int j = 0; j < 3; j++) {
+	R(i, j) = rot.at<double>(i, j);
+      }
     }
-
     Rotation = R.transpose();
     Translation = -R.transpose() * T;
     if (inlier_cnt > 12)

@@ -26,20 +26,32 @@ using namespace Eigen;
 class InitialEXRotation {
  public:
   InitialEXRotation();
-  bool CalibrationExRotation(vector<pair<Vector3d, Vector3d>> corres, Quaterniond delta_q_imu,
+  
+  
+  /// \param ric
+  bool CalibrationExRotation(const std::vector<pair<Vector3d, Vector3d>> corres, Quaterniond delta_q_imu,
                              Matrix3d &calib_ric_result);
 
  private:
+  /// \brief solve Relative Rotation 
   Matrix3d solveRelativeR(const vector<pair<Vector3d, Vector3d>> &corres);
 
+  /// \brief return ratio of valid pt(in both front of two frame) / all pts 
   double testTriangulation(const vector<cv::Point2f> &l, const vector<cv::Point2f> &r,
 			   cv::Mat_<double> R, cv::Mat_<double> t);
   void decomposeE(cv::Mat E, cv::Mat_<double> &R1, cv::Mat_<double> &R2, cv::Mat_<double> &t1,
                   cv::Mat_<double> &t2);
   int frame_count;
 
+  /// \brief Rotation from frame(k) to frame(k+1)
+  
+  // delta_q_cam_computational
   vector<Matrix3d> Rc;
+  // delta_q_imu
   vector<Matrix3d> Rimu;
+  // delta_q_cam_converted
   vector<Matrix3d> Rc_g;
+  
+  // rotation from imu(body) to camera
   Matrix3d ric;
 };

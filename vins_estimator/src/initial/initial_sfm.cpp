@@ -13,8 +13,10 @@
 
 GlobalSFM::GlobalSFM() {}
 
-void GlobalSFM::triangulatePoint(Eigen::Matrix<double, 3, 4> &Pose0, Eigen::Matrix<double, 3, 4> &Pose1,
-                                 Vector2d &point0, Vector2d &point1, Vector3d &point_3d) {
+void GlobalSFM::triangulatePoint(const Eigen::Matrix<double, 3, 4> &Pose0, 
+				 const Eigen::Matrix<double, 3, 4> &Pose1,
+                                 const Vector2d &point0, const Vector2d &point1, 
+				 Vector3d &point_3d) {
   Matrix4d design_matrix = Matrix4d::Zero();
   design_matrix.row(0) = point0[0] * Pose0.row(2) - Pose0.row(0);
   design_matrix.row(1) = point0[1] * Pose0.row(2) - Pose0.row(1);
@@ -28,8 +30,8 @@ void GlobalSFM::triangulatePoint(Eigen::Matrix<double, 3, 4> &Pose0, Eigen::Matr
 }
 
 bool GlobalSFM::solveFrameByPnP(Matrix3d &R_initial, Vector3d &P_initial, int i, vector<SFMFeature> &sfm_f) {
-  vector<cv::Point2f> pts_2_vector;
-  vector<cv::Point3f> pts_3_vector;
+  std::vector<cv::Point2f> pts_2_vector;
+  std::vector<cv::Point3f> pts_3_vector;
   for (int j = 0; j < feature_num; j++) {
     if (sfm_f[j].state != true) continue;
     Vector2d point2d;
@@ -69,8 +71,9 @@ bool GlobalSFM::solveFrameByPnP(Matrix3d &R_initial, Vector3d &P_initial, int i,
   return true;
 }
 
-void GlobalSFM::triangulateTwoFrames(int frame0, Eigen::Matrix<double, 3, 4> &Pose0, int frame1,
-                                     Eigen::Matrix<double, 3, 4> &Pose1, vector<SFMFeature> &sfm_f) {
+void GlobalSFM::triangulateTwoFrames(const int frame0, const Eigen::Matrix<double, 3, 4> &Pose0, 
+				     const int frame1, const Eigen::Matrix<double, 3, 4> &Pose1, 
+				     std::vector<SFMFeature> &sfm_f) {
   assert(frame0 != frame1);
   for (int j = 0; j < feature_num; j++) {
     if (sfm_f[j].state == true) continue;
@@ -108,10 +111,11 @@ void GlobalSFM::triangulateTwoFrames(int frame0, Eigen::Matrix<double, 3, 4> &Po
 /* pipline of construct
  * given l and frame_num relative pose, a sets of feature observations,
  * step1: 1) set l-frame as reference frame, triangulate l and last frame, 
- * 	  2) Iteratively:
+ * 	  2) Iteratively:(all other frame with frame_num -1)
  * 		solverPnp with l+1, l+2, ..., frame_num-1, with frame_num frame
  *		triangulate points between l+1,l+2,...,frame_num - 1 with frame_num frame
- * 	  3) triangulate l frame with l+1, l+2, ..., frame_num - 1
+ * 	  3) For: (all other frame with l-frame)
+ * 		triangulate l frame with l+1, l+2, ..., frame_num - 1
  * 	  4) Iteratively:
 		triangulate all remind features using 0, ..., l-1, with l-frame
 		solvePnp  between 0, ..., l-1, with l-frame
@@ -120,13 +124,11 @@ void GlobalSFM::triangulateTwoFrames(int frame0, Eigen::Matrix<double, 3, 4> &Po
  * step3: re-write all optimized pose and 3d-point into q,T and sfm_tracked_points
  * 
  */
+/// \param l -> first frame in the slide window for trangulation [..., l, ..., frame_num];
 bool GlobalSFM::construct(int frame_num, Quaterniond *q, Vector3d *T, int l, const Matrix3d relative_R,
                           const Vector3d relative_T, vector<SFMFeature> &sfm_f,
                           map<int, Vector3d> &sfm_tracked_points) {
   feature_num = sfm_f.size();
-  // cout << "set 0 and " << l << " as known " << endl;
-  // have relative_r relative_t
-  // intial two view
   q[l].w() = 1;
   q[l].x() = 0;
   q[l].y() = 0;
@@ -134,8 +136,6 @@ bool GlobalSFM::construct(int frame_num, Quaterniond *q, Vector3d *T, int l, con
   T[l].setZero();
   q[frame_num - 1] = q[l] * Quaterniond(relative_R);
   T[frame_num - 1] = relative_T;
-  // cout << "init q_l " << q[l].w() << " " << q[l].vec().transpose() << endl;
-  // cout << "init t_l " << T[l].transpose() << endl;
 
   // rotate to cam frame
   Matrix3d c_Rotation[frame_num];
@@ -145,6 +145,7 @@ bool GlobalSFM::construct(int frame_num, Quaterniond *q, Vector3d *T, int l, con
   double c_translation[frame_num][3];
   Eigen::Matrix<double, 3, 4> Pose[frame_num];
 
+  // initial view (l-th frame)
   c_Quat[l] = q[l].inverse();
   c_Rotation[l] = c_Quat[l].toRotationMatrix();
   c_Translation[l] = -1 * (c_Rotation[l] * T[l]);
@@ -164,26 +165,32 @@ bool GlobalSFM::construct(int frame_num, Quaterniond *q, Vector3d *T, int l, con
     if (i > l) {
       Matrix3d R_initial = c_Rotation[i - 1];
       Vector3d P_initial = c_Translation[i - 1];
-      if (!solveFrameByPnP(R_initial, P_initial, i, sfm_f)) return false;
+      if (!solveFrameByPnP(R_initial, P_initial, i, sfm_f)) {
+	return false;
+      }
       c_Rotation[i] = R_initial;
       c_Translation[i] = P_initial;
       c_Quat[i] = c_Rotation[i];
       Pose[i].block<3, 3>(0, 0) = c_Rotation[i];
       Pose[i].block<3, 1>(0, 3) = c_Translation[i];
     }
-
     // triangulate point based on the solve pnp result
     triangulateTwoFrames(i, Pose[i], frame_num - 1, Pose[frame_num - 1], sfm_f);
   }
+  
   // 3: triangulate l-----l+1 l+2 ... frame_num -2
-  for (int i = l + 1; i < frame_num - 1; i++) triangulateTwoFrames(l, Pose[l], i, Pose[i], sfm_f);
+  for (int i = l + 1; i < frame_num - 1; i++) {
+    triangulateTwoFrames(l, Pose[l], i, Pose[i], sfm_f);
+  }
   // 4: solve pnp l-1; triangulate l-1 ----- l
-  //             l-2              l-2 ----- l
+  //              l-2              l-2 ----- l
   for (int i = l - 1; i >= 0; i--) {
     // solve pnp
     Matrix3d R_initial = c_Rotation[i + 1];
     Vector3d P_initial = c_Translation[i + 1];
-    if (!solveFrameByPnP(R_initial, P_initial, i, sfm_f)) return false;
+    if (!solveFrameByPnP(R_initial, P_initial, i, sfm_f)) {
+      return false;
+    }
     c_Rotation[i] = R_initial;
     c_Translation[i] = P_initial;
     c_Quat[i] = c_Rotation[i];
@@ -245,14 +252,13 @@ bool GlobalSFM::construct(int frame_num, Quaterniond *q, Vector3d *T, int l, con
     }
   }
 
-  // TODO
+  // TODO for all success trangulated pt, construct all possible residual-terms
   for (int i = 0; i < feature_num; i++) {
     if (sfm_f[i].state != true) continue;
     for (int j = 0; j < int(sfm_f[i].observation.size()); j++) {
       int l = sfm_f[i].observation[j].first;
       ceres::CostFunction *cost_function =
           ReprojectionError3D::Create(sfm_f[i].observation[j].second.x(), sfm_f[i].observation[j].second.y());
-
       problem.AddResidualBlock(cost_function, NULL, c_rotation[l], c_translation[l], sfm_f[i].position);
     }
   }
@@ -282,9 +288,9 @@ bool GlobalSFM::construct(int frame_num, Quaterniond *q, Vector3d *T, int l, con
     // cout << "final  t" << " i " << i <<"  " << T[i](0) <<"  "<< T[i](1) <<"  "<< T[i](2) << endl;
   }
   for (int i = 0; i < (int)sfm_f.size(); i++) {
-    if (sfm_f[i].state)
-      sfm_tracked_points[sfm_f[i].id] =
-          Vector3d(sfm_f[i].position[0], sfm_f[i].position[1], sfm_f[i].position[2]);
+    if (sfm_f[i].state){
+      sfm_tracked_points[sfm_f[i].id] = Vector3d(sfm_f[i].position[0], sfm_f[i].position[1], sfm_f[i].position[2]);
+    }
   }
   return true;
 }

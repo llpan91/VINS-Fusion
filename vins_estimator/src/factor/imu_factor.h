@@ -20,12 +20,12 @@
 #include <ceres/ceres.h>
 
 /**
- *  15:残差向量的长度(包括p,q,v,ba,bg)
- *  7:第1个优化参数的长度(para_Pose[i])
- *  9:第2个优化参数的长度(para_SpeedBias[i])
- *  7:第3个优化参数的长度(para_Pose[j])
- *  9:第4个优化参数的长度(para_SpeedBias[j])
- * 对于Evaluate函数的输入double const *const *parameters依次对应以上4个参数
+ *  15: length of residual ( include: p,q,v,ba,bg)
+ *  7: 1-th opeimization value length (para_Pose[i])
+ *  9: 2-th opeimization value length (para_SpeedBias[i])
+ *  7: 3-th opeimization value length (para_Pose[j])
+ *  9: 4-th opeimization value length (para_SpeedBias[j])
+ * input param of Evaluate function => double const *const *parameters correspond to 4 param
  */
 class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9> {
  public:
@@ -70,7 +70,7 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9> {
     residual = pre_integration->evaluate(Pi, Qi, Vi, Bai, Bgi, Pj, Qj, Vj, Baj, Bgj);
     // p.inverse() => information matrix = inverse of covariance
     // p.inverse() = L * L.t(); use LLT decomposition => sqrt_info = L.t();
-    Eigen::Matrix<double, 15, 15> sqrt_info = Eigen::LLT<Eigen::Matrix<double, 15, 15>>(pre_integration->covariance.inverse()).matrixL().transpose();
+    Eigen::Matrix<double, 15, 15> sqrt_info = Eigen::LLT<Eigen::Matrix<double, 15, 15> >(pre_integration->covariance.inverse()).matrixL().transpose();
     // sqrt_info.setIdentity();
     residual = sqrt_info * residual;
     // d = r.t() * p.inverse() * r  = (sqrt_info * residual).t() * (sqrt_info * residual);
@@ -90,6 +90,7 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9> {
       }
 
       if (jacobians[0]) {
+	// TODO why not 15 * 6 ??
         Eigen::Map<Eigen::Matrix<double, 15, 7, Eigen::RowMajor>> jacobian_pose_i(jacobians[0]);
         jacobian_pose_i.setZero();
         jacobian_pose_i.block<3, 3>(O_P, O_P) = -Qi.inverse().toRotationMatrix();
@@ -97,6 +98,7 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9> {
 #if 0
             jacobian_pose_i.block<3, 3>(O_R, O_R) = -(Qj.inverse() * Qi).toRotationMatrix();
 #else
+        //
         Eigen::Quaterniond corrected_delta_q = pre_integration->delta_q * Utility::deltaQ(dq_dbg * (Bgi - pre_integration->linearized_bg));
         jacobian_pose_i.block<3, 3>(O_R, O_R) = -(Utility::Qleft(Qj.inverse() * Qi) * Utility::Qright(corrected_delta_q)).bottomRightCorner<3, 3>();
 #endif
