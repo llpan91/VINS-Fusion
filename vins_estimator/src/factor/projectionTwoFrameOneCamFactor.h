@@ -19,6 +19,7 @@
 #include "../utility/tic_toc.h"
 #include "../utility/utility.h"
 
+// <2, 7, 7, 7, 1, 1> // resudial(2), [Pi, Qi](7), [Pi, Qj](7), [tic, qic](7), td_i(1), td_j(1)
 class ProjectionTwoFrameOneCamFactor : public ceres::SizedCostFunction<2, 7, 7, 7, 1, 1> {
  public:
   ProjectionTwoFrameOneCamFactor(const Eigen::Vector3d &_pts_i, const Eigen::Vector3d &_pts_j,

@@ -88,8 +88,7 @@ bool ProjectionOneFrameTwoCamFactor::Evaluate(double const *const *parameters, d
         -x1 * x3 / pow(norm, 3), -x2 * x3 / pow(norm, 3), 1.0 / norm - x3 * x3 / pow(norm, 3);
     reduce = tangent_base * norm_jaco;
 #else
-    reduce << 1. / dep_j, 0, -pts_camera_j(0) / (dep_j * dep_j), 0, 1. / dep_j,
-        -pts_camera_j(1) / (dep_j * dep_j);
+    reduce << 1. / dep_j, 0, -pts_camera_j(0) / (dep_j * dep_j), 0, 1. / dep_j, -pts_camera_j(1) / (dep_j * dep_j);
 #endif
     reduce = sqrt_info * reduce;
 

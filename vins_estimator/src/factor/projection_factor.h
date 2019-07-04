@@ -17,7 +17,7 @@
 #include "../utility/tic_toc.h"
 #include "../utility/utility.h"
 
-// [2, 7, 7, 7, 1>] => residual(2), pose_i(7), pose_j(7), pose_cam_imu(7), scale_factor(1) 
+// [2, 7, 7, 7, 1>] => residual(2), pose_i(7), pose_j(7), pose_cam_imu(7), depth(1) 
 
 class ProjectionFactor : public ceres::SizedCostFunction<2, 7, 7, 7, 1> {
  public:

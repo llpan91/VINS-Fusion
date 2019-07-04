@@ -56,7 +56,6 @@ bool ProjectionFactor::Evaluate(double const *const *parameters, double *residua
 #endif
 
   residual = sqrt_info * residual;
-
   if (jacobians) {
     Eigen::Matrix3d Ri = Qi.toRotationMatrix();
     Eigen::Matrix3d Rj = Qj.toRotationMatrix();
@@ -82,7 +81,7 @@ bool ProjectionFactor::Evaluate(double const *const *parameters, double *residua
       Eigen::Map<Eigen::Matrix<double, 2, 7, Eigen::RowMajor>> jacobian_pose_i(jacobians[0]);
       Eigen::Matrix<double, 3, 6> jaco_i;
       jaco_i.leftCols<3>() = ric.transpose() * Rj.transpose();
-      jaco_i.rightCols<3>() = ric.transpose() * Rj.transpose() * Ri * -Utility::skewSymmetric(pts_imu_i);
+      jaco_i.rightCols<3>() = ric.transpose() * Rj.transpose() * Ri * - Utility::skewSymmetric(pts_imu_i);
       jacobian_pose_i.leftCols<6>() = reduce * jaco_i;
       jacobian_pose_i.rightCols<1>().setZero();
     }
@@ -183,6 +182,7 @@ void ProjectionFactor::check(double **parameters) {
 
     if (a == 0)
       Pi += delta;
+    
     else if (a == 1)
       Qi = Qi * Utility::deltaQ(delta);
     else if (a == 2)

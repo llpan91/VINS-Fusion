@@ -41,8 +41,7 @@ struct TError {
 };
 
 struct RelativeRTError {
-  RelativeRTError(double t_x, double t_y, double t_z, double q_w, double q_x, double q_y, double q_z,
-                  double t_var, double q_var)
+  RelativeRTError(double t_x, double t_y, double t_z, double q_w, double q_x, double q_y, double q_z, double t_var, double q_var)
       : t_x(t_x), t_y(t_y), t_z(t_z), q_w(q_w), q_x(q_x), q_y(q_y), q_z(q_z), t_var(t_var), q_var(q_var) {}
 
   template <typename T>

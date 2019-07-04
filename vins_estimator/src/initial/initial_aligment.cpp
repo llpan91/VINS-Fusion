@@ -30,6 +30,7 @@ void solveGyroscopeBias(map<double, ImageFrame> &all_image_frame, Vector3d *Bgs)
     A += tmp_A.transpose() * tmp_A;
     b += tmp_A.transpose() * tmp_b;
   }
+  
   delta_bg = A.ldlt().solve(b);
   ROS_WARN_STREAM("gyroscope bias initial calibration " << delta_bg.transpose());
 
