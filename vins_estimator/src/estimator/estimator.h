@@ -77,6 +77,8 @@ class Estimator {
   void updateLatestStates();
   void fastPredictIMU(double t, Eigen::Vector3d linear_acceleration, Eigen::Vector3d angular_velocity);
   bool IMUAvailable(double t);
+  
+  // TODO
   void initFirstIMUPose(vector<pair<double, Eigen::Vector3d>> &accVector);
 
   enum SolverFlag { INITIAL, NON_LINEAR };
@@ -147,6 +149,7 @@ class Estimator {
 
   int loop_window_index;
 
+  // TODO
   MarginalizationInfo *last_marginalization_info;
   vector<double *> last_marginalization_parameter_blocks;
 

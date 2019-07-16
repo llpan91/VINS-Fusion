@@ -45,10 +45,8 @@ bool ProjectionTwoFrameOneCamFactor::Evaluate(double const *const *parameters, d
   TicToc tic_toc;
   Eigen::Vector3d Pi(parameters[0][0], parameters[0][1], parameters[0][2]);
   Eigen::Quaterniond Qi(parameters[0][6], parameters[0][3], parameters[0][4], parameters[0][5]);
-
   Eigen::Vector3d Pj(parameters[1][0], parameters[1][1], parameters[1][2]);
   Eigen::Quaterniond Qj(parameters[1][6], parameters[1][3], parameters[1][4], parameters[1][5]);
-
   Eigen::Vector3d tic(parameters[2][0], parameters[2][1], parameters[2][2]);
   Eigen::Quaterniond qic(parameters[2][6], parameters[2][3], parameters[2][4], parameters[2][5]);
 

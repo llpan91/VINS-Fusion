@@ -121,7 +121,7 @@ void GlobalSFM::triangulateTwoFrames(const int frame0, const Eigen::Matrix<doubl
 		solvePnp  between 0, ..., l-1, with l-frame
  * 	  5) Traversing all remind features which observations > 2, using first and last observed frames
  * step2: Local Bundle Adjustment, ceres 
- * step3: re-write all optimized pose and 3d-point into q,T and sfm_tracked_points
+ * step3: re-write all optimized pose and 3d-point into [q, T] and sfm_tracked_points
  * 
  */
 /// \param l -> first frame in the slide window for trangulation [..., l, ..., frame_num];

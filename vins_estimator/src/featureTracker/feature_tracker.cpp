@@ -183,7 +183,9 @@ trackImage( double _cur_time, const cv::Mat &_img, const cv::Mat &_img1) {
     if (n_max_cnt > 0) {
       if (mask.empty()) cout << "mask is empty " << endl;
       if (mask.type() != CV_8UC1) cout << "mask type wrong " << endl;
-      cv::goodFeaturesToTrack(cur_img, n_pts, MAX_CNT - cur_pts.size(), 0.01, MIN_DIST, mask);
+      int feature_num = MAX_CNT - cur_pts.size();
+      std::cout << " feature_num = " << feature_num << std::endl;
+      cv::goodFeaturesToTrack(cur_img, n_pts, feature_num, 0.01, MIN_DIST, mask);
     } else
       n_pts.clear();
     ROS_DEBUG("detect feature costs: %fms", t_t.toc());

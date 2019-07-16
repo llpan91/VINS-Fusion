@@ -111,7 +111,6 @@ void MarginalizationInfo::addResidualBlockInfo(ResidualBlockInfo *residual_block
 void MarginalizationInfo::preMarginalize() {
   for (auto it : factors) {
     it->Evaluate();
-
     std::vector<int> block_sizes = it->cost_function->parameter_block_sizes();
     for (int i = 0; i < static_cast<int>(block_sizes.size()); i++) {
       long addr = reinterpret_cast<long>(it->parameter_blocks[i]);

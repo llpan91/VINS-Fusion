@@ -59,7 +59,9 @@ class MarginalizationInfo {
   int localSize(int size) const;
   int globalSize(int size) const;
   void addResidualBlockInfo(ResidualBlockInfo *residual_block_info);
+  // step1-pre-marginalization
   void preMarginalize();
+  // step2-marginalization
   void marginalize();
   std::vector<double *> getParameterBlocks(std::unordered_map<long, double *> &addr_shift);
 
